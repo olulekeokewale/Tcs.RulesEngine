@@ -1,5 +1,4 @@
-# Tcs.RulesEngine
-Database Rules Engine
+# Database Rules Engine
 
 A flexible, database-driven rules engine for .NET applications that allows you to create, manage, and execute business rules dynamically without code changes. Perfect for applications that need configurable business logic, automated decision-making, and dynamic workflows.
 Features
