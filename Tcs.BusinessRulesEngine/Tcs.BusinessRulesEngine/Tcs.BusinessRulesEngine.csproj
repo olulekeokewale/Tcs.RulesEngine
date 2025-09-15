@@ -1,0 +1,66 @@
+﻿<!-- BusinessRulesEngine.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+
+		<!-- NuGet Package Properties -->
+		<PackageId>DatabaseRulesEngine</PackageId>
+		<PackageVersion>1.0.0</PackageVersion>
+		<Title>Database-Driven Business Rules Engine</Title>
+		<Authors>Your Name</Authors>
+		<Company>Your Company</Company>
+		<Description>A flexible, database-driven rules engine for .NET applications that allows dynamic rule creation and evaluation without code changes. Supports complex conditions, multiple actions, and extensible architecture.</Description>
+		<Summary>Generic and reusable rules engine component with Entity Framework integration</Summary>
+		<PackageTags>rules-engine;business-rules;database;entity-framework;dynamic-rules;workflow</PackageTags>
+		<PackageProjectUrl>https://github.com/yourusername/database-rules-engine</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/yourusername/database-rules-engine</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageReleaseNotes>
+			Initial release featuring:
+			- Database-driven rule management
+			- Generic object evaluation
+			- Extensible action system
+			- Performance monitoring
+			- Caching support
+			- Health checks integration
+		</PackageReleaseNotes>
+		<Copyright>Copyright © 2025</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DocumentationFile>bin\Debug\net9.0\RulesEngine.xml</DocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DocumentationFile>bin\Release\net9.0\RulesEngine.xml</DocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="icon.png" Pack="true" PackagePath="\" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
+		<None Include="LICENSE" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.9" />
+		<PackageReference Include="System.Text.Json" Version="9.0.9" />
+	</ItemGroup>
+
+</Project>
