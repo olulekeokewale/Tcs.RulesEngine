@@ -8,8 +8,8 @@ using Tcs.BusinessRulesEngine.Rules;
 namespace Tcs.BusinessRulesEngine;
 public interface IRulesEngine
 {
-    Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject );
-    Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject, string ruleFilter );
+    //Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject );
+    //Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject, string ruleFilter );
     Task<List<Rule>> GetRulesForTypeAsync ( string typeName );
     Task<Rule> CreateRuleAsync ( Rule rule );
     Task<Rule> UpdateRuleAsync ( Rule rule );

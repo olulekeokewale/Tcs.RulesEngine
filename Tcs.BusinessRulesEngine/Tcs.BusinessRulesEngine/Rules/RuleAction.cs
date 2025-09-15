@@ -23,12 +23,19 @@ public class RuleAction
     [MaxLength(100)]
     public string Target { get; set; } // Property name or method name
 
-    [MaxLength(500)]
-    public string Parameters { get; set; } // JSON string for parameters
+    //[MaxLength(500)]
+    //public string Parameters { get; set; } // JSON string for parameters
 
     public int ExecutionOrder { get; set; }
+
+    public List<ActionParameter> Parameters { get; set; } = new();
 
     // Navigation property
     [ForeignKey("RuleId")]
     public virtual Rule Rule { get; set; }
 }
+
+  //public int ActionId { get; set; }
+  //  public int RuleId { get; set; }
+  //  public string ActionType { get; set; } = string.Empty;
+  //  public List<ActionParameter> Parameters { get; set; } = new();

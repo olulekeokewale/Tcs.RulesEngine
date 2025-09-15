@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Tcs.BusinessRulesEngine.Rules;
 
 namespace Tcs.BusinessRulesEngine;
@@ -18,120 +15,6 @@ public class RulesEngine : IRulesEngine
         _serviceProvider = serviceProvider;
     }
 
-    public async Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject )
-    {
-        return await EvaluateAsync(targetObject, null);
-    }
-
-    public async Task<RuleEvaluationResult> EvaluateAsync<T> ( T targetObject, string ruleFilter )
-    {
-        var result = new RuleEvaluationResult { ModifiedObject = targetObject };
-
-        try
-        {
-            var typeName = typeof(T).Name;
-            var query = _context.Rules
-                .Include(r => r.Conditions)
-                .Include(r => r.Actions)
-                .Where(r => r.IsActive && r.TargetType == typeName);
-
-            if (!string.IsNullOrEmpty(ruleFilter))
-            {
-                query = query.Where(r => r.Name.Contains(ruleFilter) || r.Description.Contains(ruleFilter));
-            }
-
-            var rules = await query.OrderByDescending(r => r.Priority).ToListAsync();
-
-            foreach (var rule in rules)
-            {
-                if (await EvaluateConditionsAsync(targetObject, rule.Conditions))
-                {
-                    result.MatchedRules.Add(rule);
-                    await ExecuteActionsAsync(targetObject, rule.Actions, result);
-                }
-            }
-
-            result.Success = true;
-        }
-        catch (Exception ex)
-        {
-            result.Errors.Add($"Error during rule evaluation: {ex.Message}");
-            result.Success = false;
-        }
-
-        return result;
-    }
-
-    private async Task<bool> EvaluateConditionsAsync<T> ( T targetObject, ICollection<RuleCondition> conditions )
-    {
-        if (!conditions.Any()) return true;
-
-        var orderedConditions = conditions.OrderBy(c => c.SequenceOrder).ToList();
-        var results = new List<bool>();
-        var operators = new List<string>();
-
-        foreach (var condition in orderedConditions)
-        {
-            var conditionResult = EvaluateCondition(targetObject, condition);
-            results.Add(conditionResult);
-
-            if (condition != orderedConditions.Last())
-            {
-                operators.Add(condition.LogicalOperator ?? "AND");
-            }
-        }
-
-        // Evaluate the boolean expression
-        return EvaluateBooleanExpression(results, operators);
-    }
-
-    private bool EvaluateCondition<T> ( T targetObject, RuleCondition condition )
-    {
-        var property = typeof(T).GetProperty(condition.PropertyName);
-        if (property == null) return false;
-
-        var propertyValue = property.GetValue(targetObject);
-        var conditionValue = ConvertValue(condition.Value, property.PropertyType);
-
-        return condition.Operator.ToUpper() switch
-        {
-            "EQUALS" => Equals(propertyValue, conditionValue),
-            "NOTEQUALS" => !Equals(propertyValue, conditionValue),
-            "GREATERTHAN" => Comparer<object>.Default.Compare(propertyValue, conditionValue) > 0,
-            "LESSTHAN" => Comparer<object>.Default.Compare(propertyValue, conditionValue) < 0,
-            "GREATERTHANOREQUAL" => Comparer<object>.Default.Compare(propertyValue, conditionValue) >= 0,
-            "LESSTHANOREQUAL" => Comparer<object>.Default.Compare(propertyValue, conditionValue) <= 0,
-            "CONTAINS" => propertyValue?.ToString()?.Contains(condition.Value) == true,
-            "NOTCONTAINS" => propertyValue?.ToString()?.Contains(condition.Value) != true,
-            "STARTSWITH" => propertyValue?.ToString()?.StartsWith(condition.Value) == true,
-            "ENDSWITH" => propertyValue?.ToString()?.EndsWith(condition.Value) == true,
-            "ISNULL" => propertyValue == null,
-            "ISNOTNULL" => propertyValue != null,
-            "IN" => condition.Value?.Split(',').Contains(propertyValue?.ToString()) == true,
-            "NOTIN" => condition.Value?.Split(',').Contains(propertyValue?.ToString()) != true,
-            _ => false
-        };
-    }
-
-    private bool EvaluateBooleanExpression ( List<bool> results, List<string> operators )
-    {
-        if (results.Count == 1) return results[0];
-
-        var result = results[0];
-        for (int i = 0; i < operators.Count; i++)
-        {
-            if (operators[i].ToUpper() == "AND")
-            {
-                result = result && results[i + 1];
-            }
-            else if (operators[i].ToUpper() == "OR")
-            {
-                result = result || results[i + 1];
-            }
-        }
-
-        return result;
-    }
 
     private async Task ExecuteActionsAsync<T> ( T targetObject, ICollection<RuleAction> actions, RuleEvaluationResult result )
     {
@@ -220,25 +103,50 @@ public class RulesEngine : IRulesEngine
         await Task.CompletedTask;
     }
 
-    private object ConvertValue ( string value, Type targetType )
+    private object ConvertValue ( List<ActionParameter> parameters, Type targetType )
     {
-        if (string.IsNullOrEmpty(value)) return null;
+        if (parameters == null || !parameters.Any())
+            return null;
 
-        if (targetType == typeof(string)) return value;
-
-        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-
-        return underlyingType.Name switch
+        try
         {
-            nameof(Int32) => int.Parse(value),
-            nameof(Int64) => long.Parse(value),
-            nameof(Double) => double.Parse(value),
-            nameof(Decimal) => decimal.Parse(value),
-            nameof(Boolean) => bool.Parse(value),
-            nameof(DateTime) => DateTime.Parse(value),
-            nameof(Guid) => Guid.Parse(value),
-            _ => Convert.ChangeType(value, underlyingType)
-        };
+            // If the target expects a simple type, just take the first parameter
+            if (targetType == typeof(string))
+                return parameters.First().Value;
+
+            if (targetType == typeof(int))
+                return int.Parse(parameters.First().Value);
+
+            if (targetType == typeof(decimal))
+                return decimal.Parse(parameters.First().Value);
+
+            if (targetType == typeof(double))
+                return double.Parse(parameters.First().Value);
+
+            if (targetType == typeof(DateTime))
+                return DateTime.Parse(parameters.First().Value);
+
+            if (targetType == typeof(bool))
+                return bool.Parse(parameters.First().Value);
+
+            // If target type is an object or complex DTO, 
+            // map parameters into a dictionary and then serialize/deserialize
+            if (!targetType.IsPrimitive && targetType != typeof(string))
+            {
+                var dict = parameters.ToDictionary(p => p.ParameterName, p => p.Value);
+
+                // Newtonsoft.Json is more forgiving than System.Text.Json
+                var json = JsonConvert.SerializeObject(dict);
+                return JsonConvert.DeserializeObject(json, targetType);
+            }
+
+            // fallback
+            return Convert.ChangeType(parameters.First().Value, targetType);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<List<Rule>> GetRulesForTypeAsync ( string typeName )
@@ -247,6 +155,15 @@ public class RulesEngine : IRulesEngine
             .Include(r => r.Conditions)
             .Include(r => r.Actions)
             .Where(r => r.TargetType == typeName)
+            .OrderByDescending(r => r.Priority)
+            .ToListAsync();
+    }
+
+    public async Task<List<Rule>> GetActiveRulesAsync ()
+    {
+        return await _context.Rules
+            .Include(r => r.Conditions)
+            .Include(r => r.Actions)
             .OrderByDescending(r => r.Priority)
             .ToListAsync();
     }
@@ -276,4 +193,34 @@ public class RulesEngine : IRulesEngine
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<InputContext> ExecuteRulesAsync ( InputContext context )
+    {
+        var rules = await GetActiveRulesAsync();
+
+        foreach (var rule in rules.OrderBy(r => r.Priority))
+        {
+            if (!rule.IsActive)
+                continue;
+
+            // Evaluate conditions (using your static ConditionEvaluator)
+            if (rule.Conditions.All(c => ConditionEvaluator.Evaluate(c, context)))
+            {
+                foreach (var actionDef in rule.Actions.OrderBy(a => a.ExecutionOrder))
+                {
+                    try
+                    {
+                        await ExecuteActionAsync(context, actionDef);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error executing action {actionDef.ActionType}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        return context;
+    }
+
 }

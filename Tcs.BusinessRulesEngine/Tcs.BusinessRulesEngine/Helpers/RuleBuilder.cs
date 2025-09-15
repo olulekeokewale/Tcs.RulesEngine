@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Tcs.BusinessRulesEngine.Rules;
+﻿using Tcs.BusinessRulesEngine.Rules;
 
-namespace Tcs.BusinessRulesEngine.Helpers;
-// Additional helper class for complex rule scenarios
 public class RuleBuilder
 {
     private readonly Rule _rule;
@@ -17,7 +10,9 @@ public class RuleBuilder
         {
             Name = name,
             TargetType = targetType,
-            IsActive = true
+            IsActive = true,
+            Conditions = new List<RuleCondition>(),
+            Actions = new List<RuleAction>()
         };
     }
 
@@ -46,29 +41,30 @@ public class RuleBuilder
         return this;
     }
 
-    public RuleBuilder AddAction ( string actionType, string target, string parameters = null )
+    public RuleBuilder AddAction ( string actionType, string target, Dictionary<string, string> parameters = null )
     {
-        _rule.Actions.Add(new RuleAction
+        var action = new RuleAction
         {
             ActionType = actionType,
             Target = target,
-            Parameters = parameters,
             ExecutionOrder = _rule.Actions.Count + 1
-        });
+        };
+
+        if (parameters != null)
+        {
+            foreach (var kv in parameters)
+            {
+                action.Parameters.Add(new ActionParameter
+                {
+                    ParameterName = kv.Key,
+                    Value = kv.Value
+                });
+            }
+        }
+
+        _rule.Actions.Add(action);
         return this;
     }
 
     public Rule Build () => _rule;
 }
-
-// Usage example with RuleBuilder:
-/*
-var rule = new RuleBuilder("Senior Citizen Discount", "Customer")
-    .WithDescription("Apply discount for senior citizens")
-    .WithPriority(7)
-    .AddCondition("Age", "GreaterThanOrEqual", "65")
-    .AddCondition("MembershipLevel", "NotEquals", "VIP", "AND")
-    .AddAction("SetProperty", "HasSeniorDiscount", "True")
-    .AddAction("LogMessage", "", "Senior citizen discount applied")
-    .Build();
-*/
